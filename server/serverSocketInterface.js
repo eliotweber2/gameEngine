@@ -117,19 +117,22 @@ class SocketConnection {
       case 'HSID': this.handleOldId(payload); break;
       case 'ACKD': this.handleAck(payload); break;
       case 'RQPC': this.sendMessage(TIME_BETWEEN_PINGS-TIME_BETWEEN_MESSAGE_SEND_ATTEMPTS,'INPT'); this.sendMessage(REQ_CODE_LENGTH,'INCL'); break;
-      case 'SVRQ': if (!("handleMessage" in this.handler)) {console.log(`WARNING: Handler for client ${this.id}
-                    does not have the required handleMessage method, the client cannot communicate with it.`)} else {
-                    this.handler.handleMessage(payload)}; break;
+      case 'SVRQ': {
+        if (!("handleMessage" in this.handler)) {
+          console.log(`WARNING: Handler for client ${this.id} does not have the required handleMessage method, the client cannot communicate with it.`)
+        } else {this.handler.handleMessage(payload)}; break}
       default: console.log(`WARNING: Client ${this.id} has sent an invalid request code: ${requestCode}`);
     }
   }
 
   sendSessId() {
-    console.log(`Client ${this.id} has connected!`)
+    if ('handleStart' in this.handler) {this.handler.handleStart()}
+    console.log(`Client ${this.id} has connected!`);
     this.sendMessage(this.sessionId,'SNID');
   }
 
   handleOldId(id) {
+    if ('handleStart' in this.handler) {this.handler.handleStart()}
     this.enabled = false;
     const correctSession = connLst.filter((ele) => ele.sessionId == id)[0].session;
     console.log(`Client ${correctSession.id} has reconnected!`)

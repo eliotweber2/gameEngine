@@ -1,1 +1,3 @@
 CLST: Client is sending its state (time,inputs,etc)
+
+NFME: Server is ready for the next frame

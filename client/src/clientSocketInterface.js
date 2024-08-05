@@ -33,7 +33,6 @@ class SocketConnection {
     }
 
     setUpSocketConnection(url) {
-        
         this.socket = new WebSocket(url);
         this.waitForSocketConnection(this.socket,afterSocketConnect);
         

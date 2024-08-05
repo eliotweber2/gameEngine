@@ -1,10 +1,8 @@
-
-
 class Engine {
-    constructor(socket,game) {
-        this.socket = socket;
+    constructor(game) {
         this.game = game;
-        this.stateMachine = game.stateMachine;
+        this.socket = null;
+        this.eventSystem = game.eventSystem;
         this.lastTime = Date.now();
         this.deltaTime = 0;
     }
@@ -20,13 +18,25 @@ class Engine {
     handleClientState(message) {
         this.deltaTime = message.time - this.lastTime;
         this.lastTime = message.time;
-        for (let input of message) {
+        for (let input of message.keyEvents) {
             if (!input.isRelease) {
-                this.stateMachine.handleKeyPress(input.eventData,this.deltaTime);
+                this.eventSystem.handleKeyPress(input.eventData,this.deltaTime);
             } else {
-                this.stateMachine.handleKeyUp(input.eventData,this.deltaTime); 
+                this.eventSystem.handleKeyUp(input.eventData,this.deltaTime); 
             }
         }
+        this.socket.sendData('','NFME');
+    }
+
+    mainloop() {
+        this.eventSystem.fireTickEvents();
+        this.eventSystem.fireCustomEvent('NEXTFRAME',{},['ENGINE'],this.deltaTime,false);
+    }
+
+    handleStart() {
+        this.eventSystem.addListener((event) => event.name == 'NEXTFRAME',() => this.mainloop());
+        this.mainloop();
+        this.socket.sendData('','NFME');
     }
 }
 
