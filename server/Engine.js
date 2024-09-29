@@ -1,3 +1,6 @@
+const physEngine = require('matter-js').Engine;
+const Wireframe = require('./Wireframe.js');
+
 class Engine {
     constructor(game) {
         this.game = game;
@@ -25,18 +28,28 @@ class Engine {
                 this.eventSystem.handleKeyUp(input.eventData,this.deltaTime); 
             }
         }
-        this.socket.sendData('','NFME');
     }
 
     mainloop() {
         this.eventSystem.fireTickEvents();
+        physEngine.update(this.game.activeScene.engine,this.deltaTime);
+        this.render('WIREFRAME');
         this.eventSystem.fireCustomEvent('NEXTFRAME',{},['ENGINE'],this.deltaTime,false);
     }
+
+    render(renderType) {
+        let rendered;
+        switch (renderType) {
+            case 'WIREFRAME': rendered = Wireframe.getRender(this.game.activeScene); break;
+            default: console.log('Invalid render method');
+        }
+        this.socket.sendData(JSON.stringify(rendered),'NFME', null, ()=>{process.exit(1)});
+    } 
 
     handleStart() {
         this.eventSystem.addListener((event) => event.name == 'NEXTFRAME',() => this.mainloop());
         this.mainloop();
-        this.socket.sendData('','NFME');
+        this.socket.sendData(JSON.stringify([]),'NFME');
     }
 }
 

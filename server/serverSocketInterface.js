@@ -1,5 +1,6 @@
 const WebSocketServer = require('ws');
 const crypto = require('crypto');
+const { callbackify } = require('util');
 
 let connID = 0;
 
@@ -154,14 +155,15 @@ class SocketConnection {
   }
 
   sendMessage(data,code,callbackOnComplete=()=>0,callbackOnFail=()=>0) {
+    if (callbackOnComplete == null) {callbackOnComplete = () => 0}
     const message = code + ' ' + data+'|'+this.messageId;
     const messageObj = new Message(message,this.client,callbackOnComplete,callbackOnFail);
     this.listOfMessages.push({messageId:this.messageId, messageObj:messageObj});
     this.messageId++;
   }
 
-  sendData(data,code) {
-    this.sendMessage(code+' '+data,'SVRS');
+  sendData(data,code,callbackOnComplete,callbackOnFail) {
+    this.sendMessage(code+' '+data,'SVRS',callbackOnComplete,callbackOnFail);
   }
 
 }

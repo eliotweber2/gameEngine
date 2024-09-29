@@ -8,7 +8,6 @@ class EventSystem {
         }
         this._tickEvents = []
         this._listeners = [];
-        this._eventQueue = [];
     }
 
     _handleEvent(eventName,eventData,eventTypes,deltaTime,isTickEvent) {
@@ -58,7 +57,7 @@ class EventSystem {
     }
 
     addListener(eventFn,callback,layerNum) {
-        const newListener = {eventFn: eventFn, callbackOnEvent: callback, layerNum: layerNum,id:randomUUID()}
+        const newListener = {eventFn: eventFn, callbackOnEvent: callback, layerNum: layerNum, id: randomUUID()}
         this._listeners.push(newListener);
         return newListener;
     }
