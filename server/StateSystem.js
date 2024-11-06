@@ -1,6 +1,6 @@
 const randomUUID = require('crypto').randomUUID;
 
-class EventSystem {
+class StateSystem {
     constructor() {
         this.state = {
             pressedKeys:[],
@@ -70,9 +70,15 @@ class EventSystem {
         eventTypes.push('CUSTOM');
         this._handleEvent(eventName,eventData,eventTypes,deltaTime,isTickEvent);
     }
+
+    fireSysEvent(eventName,eventData,eventTypes,deltaTime=null,isTickEvent=false) {
+        this._handleEvent(eventName,eventData,eventTypes,deltaTime,isTickEvent);
+    }
 }
 
-exports.EventSystem = EventSystem;
+
+
+exports.StateSystem = StateSystem;
 
 /*
 Event structure:
@@ -84,6 +90,7 @@ Event structure:
 
 Event types:
     Input
+    Key
     Keypress
     Keyhold
     Keyup

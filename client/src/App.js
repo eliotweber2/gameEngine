@@ -5,31 +5,69 @@ import {useRef,useState,useEffect} from 'react';
 function App() {
   const socket = useRef(null);
   const eventLst = useRef([]);
-  const [ptLst,setPtLst] = useState([]);
+  const svgRef = useRef(null);
+  const [elementLst,setElementLst] = useState([]);
 
   function handleMessage(message) {
     const requestCode = message.slice(0,4);
     const payload = message.slice(5);
     //console.log(requestCode,payload);
     switch (requestCode) {
-      case 'NFME': setPtLst(JSON.parse(payload)); sendState(); break;
+      case 'NFME': setElementLst(JSON.parse(payload)); sendState(); break;
       default: break;
     }
   }
 
   function sendState() {
+    if (eventLst.current.filter(x => x.type === 'key' && x.eventData.key === 'z').length > 0) {
+      socket.current.shouldReconnect = false;
+      socket.current.close();
+    }
     const responsePacket = {
       time: Date.now(),
-      keyEvents: eventLst.current,
+      events: eventLst.current,
     }
     socket.current.sendData(JSON.stringify(responsePacket),'CLST');
     eventLst.current = [];
+  }
+
+  function genComp(element) {
+    const eleLst = [];
+    switch (element.type) {
+      case 'button':
+        const button = (<button x={element.data.renderOps.x}
+          y={element.data.renderOps.y}
+          key={element.data.renderOps.name}
+          style={{width:70,height:50}}
+          onClick={() => onMouseClick(element.data.renderOps.name)}
+          >{element.data.renderOps.text}</button>);
+        eleLst.push(button); 
+        break;
+      case 'polygon':
+        eleLst.push(...genPts(element.data.vertices).concat(genRectLines(element.data.vertices))); break;
+      case 'textbox':
+        eleLst.push(<p key={element.data.renderOps.name}>{element.data.renderOps.text}</p>);
+        break;
+      case 'circle':
+        eleLst.push(<circle cx={element.data.center.x} cy={element.data.center.y} r={element.data.radius} key={element.data.renderOps.name}/>); break;
+      default:
+        console.log(`Invalid element type for element ${element} and type ${element.type}`);
+    }
+    return eleLst;
+  }
+
+  function onMouseClick(name) {
+    eventLst.current.push({
+      eventData: {name:name},
+      type: 'mouse',
+    });
   }
 
   function onKeyDown(event) {
     eventLst.current.push({
       eventData: {key:event.key},
       isRelease: false,
+      type:'key',
     });
   }
 
@@ -37,6 +75,7 @@ function App() {
     eventLst.current.push({
       eventData:{key:event.key},
       isRelease:true,
+      type:'key',
     });
   }
 
@@ -45,16 +84,19 @@ function App() {
     socketHandler.handleMessage = handleMessage;
     socket.current = new SocketConnection('ws://localhost:8080');
     socket.current.setHandler(socketHandler);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    svgRef.current.focus();
     //eslint-disable-next-line
   },[]);
-  return (
-  <svg width={window.innerWidth} height={window.innerHeight} tabIndex='0' onKeyDown={onKeyDown} onKeyUp={onKeyUp}>
-    {ptLst.map(shape => genShape(shape))}
-  </svg>);
-}
 
-function genShape(points) {
-  return genPts(points).concat(genRectLines(points));
+  return (
+  <div style={{position:'relative'}} ref={svgRef}>
+    {elementLst.filter(x => !x.data.renderOps.svgRender).map(element => genComp(element))}
+    <svg width={window.innerWidth} height={window.innerHeight} tabIndex='0' onKeyDown={onKeyDown} onKeyUp={onKeyUp}>
+      {elementLst.filter(x => x.data.renderOps.svgRender).map(element => genComp(element))}
+    </svg>
+  </div>);
 }
 
 function genPts(points) {

@@ -33,7 +33,7 @@ function startServer(createHandler=() => {foo:'bar'}) {
     connID++;
   });
 
-  console.log(`Server is listening on port ${port}!`)
+  console.log(`Server is listening on port ${port}!`);
 }
 
 function testStartServer() {
@@ -142,6 +142,7 @@ class SocketConnection {
 
   handleClose() {
     if (!this.enabled) {return}
+    this.enabled = false;
     clearTimeout(this.timeSinceLastPing);
     for (let message of this.listOfMessages) {message.messageObj.complete()}
     console.log(`Client ${this.id} has closed the connection`);
@@ -157,25 +158,27 @@ class SocketConnection {
   sendMessage(data,code,callbackOnComplete=()=>0,callbackOnFail=()=>0) {
     if (callbackOnComplete == null) {callbackOnComplete = () => 0}
     const message = code + ' ' + data+'|'+this.messageId;
-    const messageObj = new Message(message,this.client,callbackOnComplete,callbackOnFail);
+    const messageObj = new Message(message,this.client,callbackOnComplete,callbackOnFail,this);
     this.listOfMessages.push({messageId:this.messageId, messageObj:messageObj});
     this.messageId++;
   }
 
   sendData(data,code,callbackOnComplete,callbackOnFail) {
+    if (!this.enabled) {return}
     this.sendMessage(code+' '+data,'SVRS',callbackOnComplete,callbackOnFail);
   }
 
 }
 
 class Message {
-  constructor(message,socket,cbOnComplete,cbOnFail) {
+  constructor(message,socket,cbOnComplete,cbOnFail,test) {
     this.message = message;
     this.socket = socket;
     this.failCount = 0;
     this.completed = false;
     this.cbOnComplete = cbOnComplete;
     this.cbOnFail = cbOnFail;
+    this.test = test;
     this.sendAttempt = setTimeout(() => this.trySendMessage(),0);
   }
 

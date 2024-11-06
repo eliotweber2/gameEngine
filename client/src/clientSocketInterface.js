@@ -86,7 +86,7 @@ class SocketConnection {
         } else {this.handler.handleMessage(message)}
     }
 
-    stop() {
+    close() {
         console.log('Closing socket');
         this.socket.send('CLSE');
     }

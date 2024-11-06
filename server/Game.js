@@ -1,4 +1,4 @@
-const EventSystem = require('./eventSystem.js').EventSystem;
+const StateSystem = require('./StateSystem.js').StateSystem;
 const startServer = require('./serverSocketInterface.js').startServer;
 const Engine = require('./Engine.js').Engine;
 
@@ -10,7 +10,7 @@ const Scene = Components.Scene,
 
 class Game {
     constructor() {
-        this.eventSystem = new EventSystem();
+        this.stateSystem = new StateSystem();
         this.engine = new Engine(this);
         this.sceneLst = {};
         this.state = {};

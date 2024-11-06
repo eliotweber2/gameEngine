@@ -5,9 +5,10 @@ class Engine {
     constructor(game) {
         this.game = game;
         this.socket = null;
-        this.eventSystem = game.eventSystem;
+        this.stateSystem = game.stateSystem;
         this.lastTime = Date.now();
         this.deltaTime = 0;
+        this.shouldContinue = true;
     }
 
     handleMessage(message) {
@@ -21,20 +22,31 @@ class Engine {
     handleClientState(message) {
         this.deltaTime = message.time - this.lastTime;
         this.lastTime = message.time;
-        for (let input of message.keyEvents) {
-            if (!input.isRelease) {
-                this.eventSystem.handleKeyPress(input.eventData,this.deltaTime);
-            } else {
-                this.eventSystem.handleKeyUp(input.eventData,this.deltaTime); 
+        for (let event of message.events) {
+            switch (event.type) {
+                case 'key':
+                    if (!event.isRelease) {
+                        this.stateSystem.handleKeyPress(event.eventData,this.deltaTime);
+                    } else {
+                        this.stateSystem.handleKeyUp(event.eventData,this.deltaTime); 
+                    }
+                    break;
+                case 'mouse':
+                    this.stateSystem.fireSysEvent('MOUSECLICK'+event.eventData.name,event.eventData,['INPUT','MOUSECLICK'],this.deltaTime,false); break;
             }
         }
     }
 
     mainloop() {
-        this.eventSystem.fireTickEvents();
+        this.stateSystem.fireTickEvents();
         physEngine.update(this.game.activeScene.engine,this.deltaTime);
         this.render('WIREFRAME');
-        this.eventSystem.fireCustomEvent('NEXTFRAME',{},['ENGINE'],this.deltaTime,false);
+        if (this.shouldContinue) {
+            this.stateSystem.fireSysEvent('NEXTFRAME',{},['ENGINE'],this.deltaTime,false);
+        } else {
+            console.log('Engine stopped');
+            process.exit(0);
+        }
     }
 
     render(renderType) {
@@ -43,11 +55,11 @@ class Engine {
             case 'WIREFRAME': rendered = Wireframe.getRender(this.game.activeScene); break;
             default: console.log('Invalid render method');
         }
-        this.socket.sendData(JSON.stringify(rendered),'NFME', null, ()=>{process.exit(1)});
+        this.socket.sendData(JSON.stringify(rendered),'NFME', null, ()=>{process.exit(0)});
     } 
 
     handleStart() {
-        this.eventSystem.addListener((event) => event.name == 'NEXTFRAME',() => this.mainloop());
+        this.stateSystem.addListener((event) => event.name == 'NEXTFRAME',() => this.mainloop());
         this.mainloop();
         this.socket.sendData(JSON.stringify([]),'NFME');
     }

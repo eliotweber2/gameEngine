@@ -1,6 +1,7 @@
 const Bodies = require('matter-js').Bodies;
 const physEngine = require('matter-js').Engine;
 const Composite = require('matter-js').Composite;
+const Constraint = require('matter-js').Constraint;
 
 class Container {
     constructor(name,scene) {
@@ -10,11 +11,9 @@ class Container {
         this.scene = scene;
         this.canParent = true;
     }
-
     addActor(name,data) {
         const newActor = new Actor(name,this.scene,data,this);
         this.compLst[name] = newActor;
-        newActor.name = name;
     }
 }
 
@@ -45,13 +44,21 @@ class Actor {
         this.scene = scene;
         this.parent = parent;
         this.canParent = false;
-        this.createPhysObj(data.physOps);
+        this.physObj = null;
+        if (!data.physOps.noPhys) {
+            this.createPhysObj(data.physOps);
+        }
     }
 
     createPhysObj(physOps) {
         switch (physOps.type) {
-            case 'polygon': this.physObj = Bodies.fromVertices(physOps); break; // do later
+            case 'polygon': this.physObj = Bodies.fromVertices(physOps.centerX,physOps.centerY,physOps.vertices,{
+                isStatic: physOps.isStatic,
+            }); break;
             case 'rectangle': this.physObj = Bodies.rectangle(physOps.x,physOps.y,physOps.w,physOps.h,{
+                isStatic: physOps.isStatic,
+            }); break;
+            case 'circle': this.physObj = Bodies.circle(physOps.centerX,physOps.centerY,physOps.radius,{
                 isStatic: physOps.isStatic,
             }); break;
             default: console.log('Invalid physics object type'); 
