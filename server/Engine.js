@@ -55,7 +55,7 @@ class Engine {
             case 'WIREFRAME': rendered = Wireframe.getRender(this.game.activeScene); break;
             default: console.log('Invalid render method');
         }
-        this.socket.sendData(JSON.stringify(rendered),'NFME', null, ()=>{process.exit(0)});
+        this.socket.sendData(JSON.stringify(rendered),'NFME', null);
     } 
 
     handleStart() {

@@ -2,7 +2,9 @@ function getRender(scene) {
     const memberDataLst = [];
     const toCheckLst = [scene];
     while (toCheckLst.length != 0) {
+        //get next item
         const currItem = toCheckLst.pop();
+        //if leaf node, create render data and add to data list
         if (!currItem.canParent) {
             currItem.renderOps.name = currItem.name;
             switch (currItem.renderOps.type) {
@@ -17,6 +19,7 @@ function getRender(scene) {
             }
         continue;
         }
+        //else, add children to check list
         toCheckLst.push(...Object.values(currItem.compLst));
     }
     return memberDataLst;

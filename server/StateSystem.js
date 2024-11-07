@@ -2,6 +2,7 @@ const randomUUID = require('crypto').randomUUID;
 
 class StateSystem {
     constructor() {
+        //state can be added to by user
         this.state = {
             pressedKeys:[],
             mousePos:{x:0,y:0},
@@ -10,6 +11,7 @@ class StateSystem {
         this._listeners = [];
     }
 
+    //handles firing event
     _handleEvent(eventName,eventData,eventTypes,deltaTime,isTickEvent) {
         const newEvent = {
             name: eventName,
@@ -18,17 +20,23 @@ class StateSystem {
             deltaTime: deltaTime,
             isComplete: false,
         }
+        //adds to list of tick events if it is a tick event else fires immediately
         if (isTickEvent) {this._tickEvents.push(newEvent)} else {setTimeout(() => this._fireEvent(newEvent),0)}
     }
 
+    //actually emits the event
     _fireEvent(event) {
+        //get valid listeners
         const eventListeners = this._listeners.filter(listener => listener.eventFn(event));
+        //sort by layer number
         eventListeners.sort((listenerA,listenerB) => (listenerA.layerNum - listenerB.layerNum));
+        //fire event
         for (let listener of eventListeners) {
             if (!event.isComplete) {listener.callbackOnEvent(event)}
         }
     }
 
+    //handles key presses from client
     handleKeyPress(eventData,deltaTime) {
         this.state.pressedKeys.push(eventData.key);
         const keyPressEventName = 'KEYPRESS ' + eventData.key;
@@ -44,8 +52,10 @@ class StateSystem {
         this.state.pressedKeys = this.state.pressedKeys.filter(x => x != eventData.key);
     }
 
+    //fires all tick events
     fireTickEvents(deltaTime) {
         this._tickEvents.forEach((event) => {
+            //makes clone of event and fires it
             const newEvent = structuredClone(event);
             newEvent.deltaTime = deltaTime;
             this._fireEvent(newEvent);
@@ -57,7 +67,7 @@ class StateSystem {
     }
 
     addListener(eventFn,callback,layerNum) {
-        const newListener = {eventFn: eventFn, callbackOnEvent: callback, layerNum: layerNum, id: randomUUID()}
+        const newListener = {eventFn: eventFn, callbackOnEvent: callback, layerNum: layerNum, id:randomUUID()}
         this._listeners.push(newListener);
         return newListener;
     }
@@ -71,6 +81,7 @@ class StateSystem {
         this._handleEvent(eventName,eventData,eventTypes,deltaTime,isTickEvent);
     }
 
+    //should not be used by user
     fireSysEvent(eventName,eventData,eventTypes,deltaTime=null,isTickEvent=false) {
         this._handleEvent(eventName,eventData,eventTypes,deltaTime,isTickEvent);
     }

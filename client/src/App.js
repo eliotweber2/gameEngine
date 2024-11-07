@@ -11,7 +11,6 @@ function App() {
   function handleMessage(message) {
     const requestCode = message.slice(0,4);
     const payload = message.slice(5);
-    //console.log(requestCode,payload);
     switch (requestCode) {
       case 'NFME': setElementLst(JSON.parse(payload)); sendState(); break;
       default: break;
@@ -19,19 +18,22 @@ function App() {
   }
 
   function sendState() {
+    //close connection if 'z' is pressed
     if (eventLst.current.filter(x => x.type === 'key' && x.eventData.key === 'z').length > 0) {
-      socket.current.shouldReconnect = false;
       socket.current.close();
     }
+    //construct packet
     const responsePacket = {
       time: Date.now(),
       events: eventLst.current,
     }
+    //send packet and reset event list
     socket.current.sendData(JSON.stringify(responsePacket),'CLST');
     eventLst.current = [];
   }
 
   function genComp(element) {
+    //generate component based on element type
     const eleLst = [];
     switch (element.type) {
       case 'button':
@@ -44,7 +46,7 @@ function App() {
         eleLst.push(button); 
         break;
       case 'polygon':
-        eleLst.push(...genPts(element.data.vertices).concat(genRectLines(element.data.vertices))); break;
+        eleLst.push(...genPts(element.data.vertices).concat(genLines(element.data.vertices))); break;
       case 'textbox':
         eleLst.push(<p key={element.data.renderOps.name}>{element.data.renderOps.text}</p>);
         break;
@@ -79,6 +81,7 @@ function App() {
     });
   }
 
+  //on page load
   useEffect(() => {
     const socketHandler = {};
     socketHandler.handleMessage = handleMessage;
@@ -90,6 +93,7 @@ function App() {
     //eslint-disable-next-line
   },[]);
 
+  //all elements except buttons are rendered in the one svg element, all the buttons are rendered in the wrapping div
   return (
   <div style={{position:'relative'}} ref={svgRef}>
     {elementLst.filter(x => !x.data.renderOps.svgRender).map(element => genComp(element))}
@@ -99,6 +103,7 @@ function App() {
   </div>);
 }
 
+//gen pts of polygon
 function genPts(points) {
   let newPtLst = [];
   if (points.length > 0) {
@@ -109,7 +114,8 @@ function genPts(points) {
   return newPtLst;
 }
 
-function genRectLines(pts) {
+//gen lines of polygon
+function genLines(pts) {
   if (pts.length < 2) {return []}
   let lineLst = [];
   for (let i = 0; i < pts.length-1; i++) {
@@ -126,4 +132,5 @@ function Point (props) {
 function Line({pt1,pt2}) {
   return <line x1={pt1.x} y1={pt1.y} x2={pt2.x} y2={pt2.y} strokeWidth='3' stroke='red'/>
 }
+
 export default App;

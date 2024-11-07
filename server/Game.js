@@ -10,6 +10,7 @@ const Scene = Components.Scene,
 
 class Game {
     constructor() {
+        //set up separate state system and engine
         this.stateSystem = new StateSystem();
         this.engine = new Engine(this);
         this.sceneLst = {};

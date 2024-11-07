@@ -3,6 +3,7 @@ const physEngine = require('matter-js').Engine;
 const Composite = require('matter-js').Composite;
 const Constraint = require('matter-js').Constraint;
 
+//untested
 class Container {
     constructor(name,scene) {
         this.compLst = {};
@@ -24,6 +25,7 @@ class Scene {
         this.name = name;
         this.game = game;
         this.canParent = true;
+        //each scene has its own physics engine
         this.engine = physEngine.create();
     }
 
@@ -33,6 +35,7 @@ class Scene {
         newActor.name = name;
     }
 
+    //add physics object to engine of scene
     _addPhysObj(obj) {Composite.add(this.engine.world,obj)}
 }
 

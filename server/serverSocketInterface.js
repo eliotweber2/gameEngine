@@ -1,9 +1,11 @@
+//imports
 const WebSocketServer = require('ws');
 const crypto = require('crypto');
 const { callbackify } = require('util');
 
 let connID = 0;
 
+//constants
 const MAX_FAILED_PINGS = 2;
 const TIME_BETWEEN_PINGS = 2500;
 const LATE_PING_GRACE_PD = 500;
@@ -19,7 +21,8 @@ const connLst = [];
 
 let handlerFunction;
 
-function startServer(createHandler=() => {foo:'bar'}) {
+function startServer(createHandler=() => {}) {
+  //create server
   const wss = new WebSocketServer.Server({ port: port });
 
   wss.clientTracking = true;
@@ -27,6 +30,7 @@ function startServer(createHandler=() => {foo:'bar'}) {
   handlerFunction = createHandler;
   
   wss.on("connection", socket => {
+    //create new socket and assign a handler
     const newSocket = new SocketConnection(socket,connID);
     const handler = handlerFunction(newSocket);
     newSocket.handler = handler;
@@ -36,6 +40,8 @@ function startServer(createHandler=() => {foo:'bar'}) {
   console.log(`Server is listening on port ${port}!`);
 }
 
+//boots up the server but does not require a handler
+//for testing interface
 function testStartServer() {
   const wss = new WebSocketServer.Server({ port: 8080 });
 
@@ -47,35 +53,26 @@ function testStartServer() {
     connID++;
   });
 
-  console.log('Server is listening on port 8080!')
+  console.log('Server is listening on port 8080!');
 }
 
-function handleFailedPing(socket) {
-  if (!socket.enabled) {return}
-  socket.failedPings++;
-  console.log(`Client ${socket.id} has failed to ping`)
-  if (socket.failedPings >= MAX_FAILED_PINGS) {
-    socket.client.close(1000, "CONN_TIMEOUT");
-    console.log(`Client ${socket.id} has timed out`);
-  } else {
-    socket.catchTimeout();
-  }
-}
-
+//handles the socket connection
 class SocketConnection {
   constructor(client,id) {
     this.id = id;
     this.messageId = 0;
     this.enabled = true;
+    //list of messages in progress
     this.listOfMessages = [];
     this.sessionId = crypto.randomUUID();;
     this.handler = undefined;
-    connLst.push({sessionId:this.sessionId,session:this})
+    //add to list of connections
+    connLst.push({sessionId:this.sessionId,session:this});
+    this.client = client;
     this.onNewSocket(client);
   }
 
-  onNewSocket(client) {
-    this.client = client;
+  onNewSocket() {
     this.failedPings = 0;
     this.catchTimeout();
     this.client.on('message',(message) => this.handleMessage(message));
@@ -83,10 +80,24 @@ class SocketConnection {
     this.client.on('error', (error) => this.handleError(error));
   }
 
+  //sets up heartbeat
   catchTimeout() {
     if (!this.enabled) {return}
     // Sets up a Timeout to limit the time between pings from the client
     this.timeSinceLastPing = setTimeout(() => handleFailedPing(this),TIME_BETWEEN_PINGS + LATE_PING_GRACE_PD);
+  }
+
+  handleFailedPing() {
+    if (!this.enabled) {return}
+    this.failedPings++;
+    console.log(`Client ${this.id} has failed to ping`)
+    if (this.failedPings >= MAX_FAILED_PINGS) {
+      this.client.close(1000, "CONN_TIMEOUT");
+      console.log(`Client ${this.id} has timed out`);
+    } else {
+      //retry ping
+      this.catchTimeout();
+    }
   }
 
   pongClient() {
@@ -94,11 +105,14 @@ class SocketConnection {
     clearTimeout(this.timeSinceLastPing);
     this.failedPings = 0;
     this.sendMessage('',"PONG");
+    //reset ping timer
     this.catchTimeout();
     //console.log(`Client ${this.id} has pinged!`)
   }
 
+  //handle acknowledgement of message
   handleAck(messageId) {
+    //find correct message and remove it from the list
     let messageObj = this.listOfMessages.filter((obj) => obj.messageId == messageId)[0];
     this.listOfMessages.splice(this.listOfMessages.indexOf(messageObj),1);
     messageObj = messageObj.messageObj;
@@ -126,6 +140,8 @@ class SocketConnection {
     }
   }
 
+  //for allowing a client to reconnect
+  //untested
   sendSessId() {
     if ('handleStart' in this.handler) {this.handler.handleStart()}
     console.log(`Client ${this.id} has connected!`);
@@ -140,21 +156,24 @@ class SocketConnection {
     correctSession.onNewSocket(this.client);
   }
 
+  //close socket and disable the handler
   handleClose() {
     if (!this.enabled) {return}
     this.enabled = false;
     clearTimeout(this.timeSinceLastPing);
+    //complete all messages still in process
     for (let message of this.listOfMessages) {message.messageObj.complete()}
     console.log(`Client ${this.id} has closed the connection`);
     if ('handleClose' in this.handler) {this.handler.handleClose()}
   }
 
+  //untested
   handleError(err) {
     if (!this.enabled) {return}
     this.handleClose();
     console.log(`WARNING: Client ${this.id} has had the following error: ${err}`)
   }
-
+  
   sendMessage(data,code,callbackOnComplete=()=>0,callbackOnFail=()=>0) {
     if (callbackOnComplete == null) {callbackOnComplete = () => 0}
     const message = code + ' ' + data+'|'+this.messageId;
@@ -163,6 +182,7 @@ class SocketConnection {
     this.messageId++;
   }
 
+  //accessible by handler
   sendData(data,code,callbackOnComplete,callbackOnFail) {
     if (!this.enabled) {return}
     this.sendMessage(code+' '+data,'SVRS',callbackOnComplete,callbackOnFail);
@@ -170,6 +190,7 @@ class SocketConnection {
 
 }
 
+//message class, automatically retries message on fail
 class Message {
   constructor(message,socket,cbOnComplete,cbOnFail,test) {
     this.message = message;

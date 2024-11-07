@@ -1,8 +1,7 @@
-let Game = require('../server/Game');
+const Game = require('../server/Game').Game;
 const Body = require('matter-js').Body;
 const Vector = require('matter-js').Vector;
-const startGame = Game.startGame;
-Game = Game.Game;
+const startGame = require('../server/Game').startGame;
 
 function newGame() {
     const game = new Game();
